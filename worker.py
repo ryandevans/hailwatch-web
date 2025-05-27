@@ -1,7 +1,8 @@
 import requests
 from datetime import datetime
-from supabase_client import supabase
-from hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
+from backend.supabase_client import supabase
+from backend.hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
+
 
 
 def fetch_noaa_alerts():
