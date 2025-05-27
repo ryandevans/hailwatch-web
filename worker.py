@@ -2,6 +2,7 @@ import requests
 from datetime import datetime
 from backend.supabase_client import supabase
 from backend.hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
+from backend.utils import get_roof_count
 
 
 
