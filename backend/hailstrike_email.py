@@ -3,8 +3,6 @@ import email
 from datetime import datetime, timedelta
 from backend.supabase_client import supabase
 from backend.utils import get_roof_count
-from supabase_client import supabase
-from backend.utils import get_roof_count
 from hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
 
 
