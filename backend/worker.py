@@ -1,6 +1,7 @@
 import requests
 from datetime import datetime
 from backend.supabase_client import supabase
+from backend.hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
 
 def fetch_noaa_alerts():
     print("📡 Fetching NOAA alerts...")
@@ -18,25 +19,24 @@ def fetch_noaa_alerts():
         try:
             alert_id = feature.get("id")
             sent_time = feature["properties"].get("sent")
-            geometry = feature["geometry"]
+            geometry = feature.get("geometry")
 
             if not alert_id or not geometry or not geometry["coordinates"]:
                 continue
 
-            # Check if already in Supabase
+            coords = geometry["coordinates"][0][0]  # [lon, lat]
+            lon, lat = coords[0], coords[1]
+
             exists = supabase.table("alerts").select("id").eq("alert_id", alert_id).execute()
             if exists.data:
-                print(f"⏭️ Skipping duplicate alert: {alert_id}")
+                print(f"⏭️ Skipping duplicate NOAA alert: {alert_id}")
                 continue
-
-            coords = geometry["coordinates"][0][0]  # first [lon, lat]
-            lon, lat = coords[0], coords[1]
 
             alert = {
                 "alert_id": alert_id,
                 "lat": lat,
                 "lon": lon,
-                "hail_size": 1.0,  # Default placeholder
+                "hail_size": 1.0,  # Default until we parse real size
                 "source": "noaa",
                 "roof_count": get_roof_count(lat, lon),
                 "city": None,
@@ -47,11 +47,12 @@ def fetch_noaa_alerts():
             alerts.append(alert)
 
         except Exception as e:
-            print("🚫 Error processing alert:", e)
+            print("🚫 Error processing NOAA alert:", e)
 
     return alerts
 
-def get_roof_count(lat, lon, radius_meters=1609):  # 1 mile
+def get_roof_count(lat, lon, radius_meters=1609):
+    print(f"🔍 Counting roofs near {lat}, {lon}")
     query = f"""
     [out:json][timeout:25];
     (
@@ -69,16 +70,24 @@ def get_roof_count(lat, lon, radius_meters=1609):  # 1 mile
 
 def push_to_supabase(alerts):
     for alert in alerts:
-        print(f"📤 Uploading alert at {alert['lat']}, {alert['lon']}")
+        print(f"📤 Uploading NOAA alert at {alert['lat']}, {alert['lon']}")
         supabase.table("alerts").insert(alert).execute()
 
 if __name__ == "__main__":
-    print("🚀 NOAA Worker Started")
-    new_alerts = fetch_noaa_alerts()
+    print("🚀 HailWatch worker started")
 
-    if new_alerts:
-        push_to_supabase(new_alerts)
+    # NOAA
+    noaa_alerts = fetch_noaa_alerts()
+    if noaa_alerts:
+        push_to_supabase(noaa_alerts)
     else:
-        print("📭 No new alerts found.")
+        print("📭 No new NOAA alerts")
 
-    print("✅ Done.")
+    # HailStrike
+    hailstrike_alerts = fetch_hailstrike_alerts()
+    if hailstrike_alerts:
+        push_hail(hailstrike_alerts)
+    else:
+        print("📭 No new HailStrike alerts")
+
+    print("✅ Worker finished.")
