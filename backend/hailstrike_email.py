@@ -3,6 +3,9 @@ import email
 from datetime import datetime, timedelta
 from backend.supabase_client import supabase
 from backend.worker import get_roof_count
+from supabase_client import supabase
+from hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
+
 
 # NOTE: For deployment to Render, replace these with environment variables later
 EMAIL = "hailstrike@unitedpowersolutions.com"
