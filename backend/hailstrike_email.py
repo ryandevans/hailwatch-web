@@ -3,10 +3,8 @@ import email
 from datetime import datetime, timedelta
 from backend.supabase_client import supabase
 from backend.utils import get_roof_count
-from hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
 
-
-# NOTE: For deployment to Render, replace these with environment variables later
+# You can later replace these with environment variables
 EMAIL = "hailstrike@unitedpowersolutions.com"
 APP_PASSWORD = "eibz cigt aqlt xncx"
 
@@ -31,7 +29,7 @@ def fetch_hailstrike_alerts():
             raw_email = msg_data[0][1]
             msg = email.message_from_bytes(raw_email)
 
-            # Get email body
+            # Get plain text body
             body = ""
             if msg.is_multipart():
                 for part in msg.walk():
@@ -50,7 +48,7 @@ def fetch_hailstrike_alerts():
                 alert_id = f"hailstrike-{num.decode()}"
                 exists = supabase.table("alerts").select("id").eq("alert_id", alert_id).execute()
                 if exists.data:
-                    print(f"⏭️ Skipping duplicate email alert: {alert_id}")
+                    print(f"⏭️ Skipping duplicate alert: {alert_id}")
                     continue
 
                 alert = {
@@ -65,10 +63,11 @@ def fetch_hailstrike_alerts():
                     "county": None,
                     "timestamp": datetime.utcnow().isoformat()
                 }
+
                 new_alerts.append(alert)
 
             except Exception as e:
-                print("❌ Failed to parse email alert:", e)
+                print("❌ Failed to parse alert:", e)
 
         return new_alerts
 
