@@ -5,13 +5,12 @@ from pathlib import Path
 from pydantic import BaseModel
 from uuid import uuid4
 from datetime import datetime
-import asyncio
-
 from backend.supabase_client import supabase
+import time
 
 app = FastAPI()
 
-# Allow frontend apps to call this API
+# Allow cross-origin requests (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,29 +18,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve the logs page
 @app.get("/", response_class=HTMLResponse)
 async def serve_logs():
     return Path("templates/logs.html").read_text()
 
-
-# SSE streaming endpoint
 @app.get("/stream")
 async def stream_logs():
-    async def event_generator():
-        with open("logs.txt", "r") as f:
-            f.seek(0, 2)  # go to end of file
-            while True:
-                line = f.readline()
-                if line:
-                    yield f"data: {line.strip()}\n\n"
-                else:
-                    await asyncio.sleep(1)
+    def event_stream():
+        last_pos = 0
+        while True:
+            try:
+                with open("logs.txt", "r", encoding="utf-8") as f:
+                    f.seek(last_pos)
+                    lines = f.readlines()
+                    if lines:
+                        for line in lines:
+                            yield f"data: {line.strip()}\n\n"
+                        last_pos = f.tell()
+                time.sleep(1)
+            except Exception as e:
+                yield f"data: ❌ Error reading logs: {e}\n\n"
+                time.sleep(2)
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
-# Data model for alerts
 class Alert(BaseModel):
     lat: float
     lon: float
@@ -52,7 +51,6 @@ class Alert(BaseModel):
     source: str
     roof_count: int = 0
 
-# Insert new alert
 @app.post("/alerts")
 def insert_alert(alert: Alert):
     response = supabase.table("alerts").insert({
