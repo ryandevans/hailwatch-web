@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HailWatch Live Logs</title>
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <style>
+    body {
+      background-color: #0d1117;
+      color: #e6edf3;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 20px;
+      margin: 0;
+    }
+    .log-container {
+      max-width: 800px;
+      margin: auto;
+      background: #161b22;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-y: scroll;
+      height: 80vh;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+    }
+    .log-line {
+      margin: 6px 0;
+      white-space: pre-wrap;
+    }
+    .timestamp {
+      color: #8b949e;
+    }
+    .emoji {
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚨 HailWatch Live Logs</h1>
+  <div class="log-container" id="logContainer"></div>
+
+  <script>
+    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY";
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const logContainer = document.getElementById("logContainer");
+
+    function addLogEntry(message, timestamp) {
+      const logLine = document.createElement("div");
+      logLine.className = "log-line";
+      logLine.innerHTML = `<span class="timestamp">[${new Date(timestamp).toLocaleTimeString()}]</span> ${message}`;
+      logContainer.appendChild(logLine);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    async function loadRecentLogs() {
+      const { data, error } = await supabase
+        .from("logs")
+        .select("message, created_at")
+        .order("created_at", { ascending: true })
+        .limit(100);
+
+      if (data) {
+        data.forEach(log => addLogEntry(log.message, log.created_at));
+      }
+    }
+
+    function streamLogs() {
+      supabase
+        .channel('logs-stream')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'logs' },
+          (payload) => {
+            const { message, created_at } = payload.new;
+            addLogEntry(message, created_at);
+          }
+        )
+        .subscribe();
+    }
+
+    loadRecentLogs();
+    streamLogs();
+  </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 from pydantic import BaseModel
 from uuid import uuid4
 from datetime import datetime
@@ -15,6 +17,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app = FastAPI()
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_logs():
+    return Path("templates/logs.html").read_text()
 
 # Health check endpoint
 @app.get("/")
