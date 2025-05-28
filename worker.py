@@ -85,3 +85,6 @@ if __name__ == "__main__":
         log("📭 No new HailStrike alerts")
 
     log("✅ Worker finished.")
+
+with open("logs.txt", "a") as f:
+    f.write("✅ Worker executed manually\n")
