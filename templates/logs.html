@@ -1,28 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>HailWatch Logs</title>
+  <meta charset="UTF-8">
+  <title>Live HailWatch Logs</title>
   <style>
-    body { font-family: monospace; background: #000; color: #0f0; padding: 20px; }
-    #log { white-space: pre-wrap; }
+    body {
+      font-family: monospace;
+      background-color: #111;
+      color: #0f0;
+      padding: 20px;
+    }
+    h1 {
+      color: #0f0;
+    }
+    #log {
+      white-space: pre-wrap;
+      border: 1px solid #444;
+      padding: 15px;
+      background-color: #000;
+      height: 80vh;
+      overflow-y: scroll;
+    }
   </style>
 </head>
 <body>
-  <h1>HailWatch Live Logs</h1>
-  <div id="log">Connecting...</div>
+  <h1> Real Time Hail Check (with roof counts)</h1>
+  <div id="log"></div>
 
   <script>
-    const logEl = document.getElementById("log");
-    const evtSource = new EventSource("/stream-logs");
+    const logDiv = document.getElementById("log");
+    const evtSource = new EventSource("/stream");
 
-    evtSource.onmessage = function(event) {
-      logEl.textContent += `\n${event.data}`;
-      logEl.scrollTop = logEl.scrollHeight;
-    };
-
-    evtSource.onerror = function(err) {
-      logEl.textContent += "\n❌ Connection lost. Retrying...";
+    evtSource.onmessage = function (event) {
+      logDiv.textContent += event.data + "\n";
+      logDiv.scrollTop = logDiv.scrollHeight;
     };
   </script>
 </body>
