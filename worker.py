@@ -4,12 +4,20 @@ from backend.supabase_client import supabase
 from backend.hailstrike_email import fetch_hailstrike_alerts, push_to_supabase as push_hail
 from backend.utils import get_roof_count
 
+LOG_FILE = "logs.txt"
+
 def log(message):
-    print(message)
-    supabase.table("logs").insert({"message": message, "timestamp": datetime.utcnow().isoformat()}).execute()
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    full_message = f"{timestamp} {message}"
+    print(full_message)
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(full_message + "\n")
+    except Exception as e:
+        print("⚠️ Failed to write to log file:", e)
 
 def fetch_noaa_alerts():
-    log("\U0001F4E1 Fetching NOAA alerts...")
+    log("📡 Fetching NOAA alerts...")
     url = "https://api.weather.gov/alerts/active?event=Severe%20Thunderstorm%20Warning"
     response = requests.get(url)
 
@@ -37,16 +45,16 @@ def fetch_noaa_alerts():
                 log(f"⏭️ Skipping duplicate NOAA alert: {alert_id}")
                 continue
 
-            count = get_roof_count(lat, lon)
-            log(f"🔍 Counting roofs near {lat}, {lon}: {count}")
+            roof_count = get_roof_count(lat, lon)
+            log(f"🔍 Counting roofs near {lat}, {lon}: {roof_count}")
 
             alert = {
                 "alert_id": alert_id,
                 "lat": lat,
                 "lon": lon,
-                "size": 1.0,
+                "hail_size": 1.0,
                 "source": "noaa",
-                "roof_count": count,
+                "roof_count": roof_count,
                 "city": None,
                 "state": None,
                 "county": None,
@@ -70,14 +78,12 @@ def push_to_supabase(alerts):
 if __name__ == "__main__":
     log("🚀 HailWatch worker started")
 
-    # NOAA
     noaa_alerts = fetch_noaa_alerts()
     if noaa_alerts:
         push_to_supabase(noaa_alerts)
     else:
         log("📭 No new NOAA alerts")
 
-    # HailStrike
     hailstrike_alerts = fetch_hailstrike_alerts()
     if hailstrike_alerts:
         push_hail(hailstrike_alerts)
@@ -85,6 +91,3 @@ if __name__ == "__main__":
         log("📭 No new HailStrike alerts")
 
     log("✅ Worker finished.")
-
-with open("logs.txt", "a") as f:
-    f.write("✅ Worker executed manually\n")
