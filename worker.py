@@ -74,6 +74,8 @@ def push_to_supabase(alerts):
             supabase.table("alerts").insert(alert).execute()
         except Exception as e:
             log(f"❌ Failed to insert alert: {e}")
+    print("📦 Inserting alert:", alert)
+
 
 if __name__ == "__main__":
     log("🚀 HailWatch worker started")
